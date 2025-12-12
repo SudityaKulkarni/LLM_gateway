@@ -35,7 +35,7 @@ const ResultCard = ({ title, result, loading }) => {
     }
     return (
       <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-success text-white">
-        ✓ Safe
+      
       </span>
     );
   };
@@ -48,47 +48,215 @@ const ResultCard = ({ title, result, loading }) => {
       </div>
       
       <div className="space-y-3">
-        {result.reason && (
-          <div>
-            <span className="text-sm text-gray-400">Reason:</span>
-            <p className="text-gray-200 mt-1">{result.reason}</p>
-          </div>
-        )}
-        
-        {result.confidence !== undefined && (
-          <div>
-            <span className="text-sm text-gray-400">Confidence:</span>
-            <div className="mt-2">
-              <div className="flex items-center gap-2">
-                <div className="flex-1 bg-slate-700 rounded-full h-2">
-                  <div
-                    className="bg-primary h-2 rounded-full transition-all"
-                    style={{ width: `${result.confidence * 100}%` }}
-                  ></div>
-                </div>
-                <span className="text-sm text-gray-300 min-w-[50px]">
-                  {(result.confidence * 100).toFixed(1)}%
+        {/* Display formatted response data */}
+        <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-lg p-5 border border-slate-700 shadow-lg">
+          <div className="space-y-4">
+            {/* Status */}
+            {result.status && (
+              <div className="flex items-start">
+                <span className="text-sm font-semibold text-blue-400 min-w-[140px]">Status:</span>
+                <span className="text-gray-200 font-medium">{result.status}</span>
+              </div>
+            )}
+            
+            {/* Is Jailbreak / Is Flagged / Is Toxic / Is Gibberish / Is Prompt Injection */}
+            {(result.is_jailbreak !== undefined || result.is_toxic !== undefined || 
+              result.is_gibberish !== undefined || result.is_prompt_injection !== undefined || 
+              result.flagged !== undefined) && (
+              <div className="flex items-start">
+                <span className="text-sm font-semibold text-blue-400 min-w-[140px]">
+                  {result.is_jailbreak !== undefined ? 'Is Jailbreak:' : 
+                   result.is_toxic !== undefined ? 'Is Toxic:' :
+                   result.is_gibberish !== undefined ? 'Is Gibberish:' :
+                   result.is_prompt_injection !== undefined ? 'Is Prompt Injection:' :
+                   'Flagged:'}
+                </span>
+                <span className={`font-semibold ${(result.is_jailbreak || result.is_toxic || result.is_gibberish || result.is_prompt_injection || result.flagged) ? 'text-red-400' : 'text-green-400'}`}>
+                  {(result.is_jailbreak || result.is_toxic || result.is_gibberish || result.is_prompt_injection || result.flagged) ? 'true' : 'false'}
                 </span>
               </div>
-            </div>
+            )}
+            
+            {/* Risk Level */}
+            {result.risk_level && (
+              <div className="flex items-start">
+                <span className="text-sm font-semibold text-blue-400 min-w-[140px]">Risk Level:</span>
+                <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+                  result.risk_level === 'High' ? 'bg-red-500/20 text-red-400 border border-red-500/50' :
+                  result.risk_level === 'Medium' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50' :
+                  'bg-green-500/20 text-green-400 border border-green-500/50'
+                }`}>
+                  {result.risk_level}
+                </span>
+              </div>
+            )}
+            
+            {/* Confidence */}
+            {result.confidence !== undefined && (
+              <div className="flex items-start">
+                <span className="text-sm font-semibold text-blue-400 min-w-[140px]">Confidence:</span>
+                <div className="flex-1">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 bg-slate-700 rounded-full h-2.5 overflow-hidden">
+                      <div
+                        className="bg-gradient-to-r from-blue-500 to-purple-500 h-2.5 rounded-full transition-all duration-500 shadow-lg"
+                        style={{ width: `${result.confidence * 100}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-sm font-bold text-purple-400 min-w-[60px]">
+                      {(result.confidence * 100).toFixed(2)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Score */}
+            {result.score !== undefined && (
+              <div className="flex items-start">
+                <span className="text-sm font-semibold text-blue-400 min-w-[140px]">Score:</span>
+                <span className="text-gray-200 font-mono bg-slate-800 px-3 py-1 rounded border border-slate-600">
+                  {result.score.toFixed(6)}
+                </span>
+              </div>
+            )}
+            
+            {/* Classification / Label */}
+            {(result.classification || result.label) && (
+              <div className="flex items-start">
+                <span className="text-sm font-semibold text-blue-400 min-w-[140px]">
+                  {result.classification ? 'Classification:' : 'Label:'}
+                </span>
+                <span className="text-orange-400 font-medium bg-orange-500/10 px-3 py-1 rounded border border-orange-500/30">
+                  {result.classification || result.label}
+                </span>
+              </div>
+            )}
+            
+            {/* Reason */}
+            {result.reason && (
+              <div className="flex items-start">
+                <span className="text-sm font-semibold text-blue-400 min-w-[140px]">Reason:</span>
+                <p className="text-gray-300 flex-1 leading-relaxed">{result.reason}</p>
+              </div>
+            )}
+            
+            {/* Categories (Toxicity specific) */}
+            {result.categories && (
+              <div>
+                <span className="text-sm font-semibold text-blue-400 block mb-2">Toxicity Categories:</span>
+                <div className="grid grid-cols-2 gap-2 pl-4">
+                  {Object.entries(result.categories).map(([category, score]) => (
+                    <div key={category} className="bg-slate-800/50 rounded p-3 border border-slate-600">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm text-gray-300 font-medium capitalize">
+                          {category.replace(/_/g, ' ')}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 bg-slate-700 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className={`h-1.5 rounded-full transition-all duration-500 ${
+                                score > 0.7 ? 'bg-red-500' : 
+                                score > 0.4 ? 'bg-yellow-500' : 
+                                'bg-green-500'
+                              }`}
+                              style={{ width: `${score * 100}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-xs font-mono text-gray-400 min-w-[60px]">
+                            {(score * 100).toFixed(2)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* PII Entities */}
+            {result.entities && result.entities.length > 0 && (
+              <div>
+                <span className="text-sm font-semibold text-blue-400 block mb-2">Detected Entities:</span>
+                <div className="space-y-2 pl-4">
+                  {result.entities.map((entity, idx) => (
+                    <div key={idx} className="bg-slate-800/50 rounded p-3 border border-slate-600">
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="text-gray-400">Entity:</span>
+                          <span className="text-yellow-400 font-medium ml-2">{entity.entity}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400">Type:</span>
+                          <span className="text-cyan-400 font-medium ml-2">{entity.type}</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-gray-400">Score:</span>
+                          <span className="text-green-400 font-mono ml-2">{entity.score.toFixed(4)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Entropy Value */}
+            {result.entropy_value !== undefined && (
+              <div className="flex items-start">
+                <span className="text-sm font-semibold text-blue-400 min-w-[140px]">Entropy Value:</span>
+                <span className="text-gray-200 font-mono bg-slate-800 px-3 py-1 rounded border border-slate-600">
+                  {result.entropy_value.toFixed(4)}
+                </span>
+              </div>
+            )}
+            
+            {/* Is High Entropy */}
+            {result.is_high_entropy !== undefined && (
+              <div className="flex items-start">
+                <span className="text-sm font-semibold text-blue-400 min-w-[140px]">High Entropy:</span>
+                <span className={`font-semibold ${result.is_high_entropy ? 'text-red-400' : 'text-green-400'}`}>
+                  {result.is_high_entropy ? 'true' : 'false'}
+                </span>
+              </div>
+            )}
+            
+            {/* Pattern Matches */}
+            {result.patterns_matched !== undefined && (
+              <div className="flex items-start">
+                <span className="text-sm font-semibold text-blue-400 min-w-[140px]">Patterns Matched:</span>
+                <span className="text-gray-200 font-bold">{result.patterns_matched}</span>
+              </div>
+            )}
+            
+            {/* Detections */}
+            {result.detections && result.detections.length > 0 && (
+              <div>
+                <span className="text-sm font-semibold text-blue-400 block mb-2">Detections:</span>
+                <div className="space-y-2 pl-4">
+                  {result.detections.map((detection, idx) => (
+                    <div key={idx} className="bg-red-500/10 rounded p-3 border border-red-500/30">
+                      <div className="text-sm">
+                        <div className="text-red-400 font-medium mb-1">{detection.pattern}</div>
+                        <div className="text-gray-300 text-xs">{detection.reason}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Other Details */}
+            {result.details && (
+              <div>
+                <span className="text-sm font-semibold text-blue-400 block mb-2">Additional Details:</span>
+                <pre className="text-gray-300 text-xs bg-slate-800/50 p-3 rounded border border-slate-600 overflow-x-auto">
+                  {JSON.stringify(result.details, null, 2)}
+                </pre>
+              </div>
+            )}
           </div>
-        )}
-
-        {result.score !== undefined && (
-          <div>
-            <span className="text-sm text-gray-400">Score:</span>
-            <p className="text-gray-200 mt-1">{result.score.toFixed(3)}</p>
-          </div>
-        )}
-
-        {result.details && (
-          <div>
-            <span className="text-sm text-gray-400">Details:</span>
-            <pre className="text-gray-200 mt-1 text-sm bg-slate-900 p-3 rounded overflow-x-auto">
-              {JSON.stringify(result.details, null, 2)}
-            </pre>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );

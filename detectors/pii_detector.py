@@ -56,6 +56,9 @@ class PIIDetector(BaseDetector):
         if re.search(PII_PATTERNS["ip_address"]["pattern"], text):
             pii_types_found.append("ip_address")
         
+        if re.search(PII_PATTERNS["aadhar"]["pattern"], text):
+            pii_types_found.append("aadhar")
+        
         if re.search(r'\b(?:api[_-]?key|apikey|access[_-]?token)', text, re.IGNORECASE):
             pii_types_found.append("api_key")
         
@@ -135,6 +138,16 @@ class PIIDetector(BaseDetector):
                 "type": "ssn",
                 "original_length": 11,
                 "redacted_to": masked_ssn
+            })        
+        # Redact Aadhar numbers
+        aadhars = re.findall(PII_PATTERNS["aadhar"]["pattern"], redacted)
+        for aadhar in aadhars:
+            masked_aadhar = f"{mask_char * 4}-{mask_char * 4}-{mask_char * 4}"
+            redacted = redacted.replace(aadhar, masked_aadhar)
+            redactions.append({
+                "type": "aadhar",
+                "original_length": len(aadhar),
+                "redacted_to": masked_aadhar
             })
         
         # Redact credit cards

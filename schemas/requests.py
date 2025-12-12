@@ -13,6 +13,7 @@ class ComprehensiveCheckRequest(BaseModel):
     check_toxicity: bool = Field(True, description="Enable toxicity detection")
     check_jailbreak: bool = Field(True, description="Enable jailbreak detection")
     check_prompt_injection: bool = Field(True, description="Enable prompt injection detection")
+    check_pii: bool = Field(True, description="Enable PII detection")
     check_entropy: bool = Field(True, description="Enable Shannon entropy detection")
     check_jailbreak_rules: bool = Field(True, description="Enable rule-based jailbreak detection")
     entropy_threshold: float = Field(4.5, description="Threshold for high entropy detection")

@@ -9,6 +9,7 @@ import PromptInjectionDetector from './pages/PromptInjectionDetector';
 import GibberishDetector from './pages/GibberishDetector';
 import EntropyDetector from './pages/EntropyDetector';
 import RuleBasedDetector from './pages/RuleBasedDetector';
+import Logs from './pages/Logs';
 
 function App() {
   const navItems = [
@@ -21,6 +22,7 @@ function App() {
     { path: '/gibberish', label: '🔤 Gibberish', component: GibberishDetector },
     { path: '/entropy', label: '📈 Entropy', component: EntropyDetector },
     { path: '/rule-based', label: '📋 Rule-Based', component: RuleBasedDetector },
+    { path: '/logs', label: '📝 Logs', component: Logs },
   ];
 
   return (

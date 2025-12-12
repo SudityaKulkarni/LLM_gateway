@@ -33,7 +33,10 @@ export const checkRuleBased = (prompt) =>
 export const safeGenerate = (prompt, apiKey) => 
   api.post('/safe_generate_gemini', { text: prompt, gemini_api_key: apiKey });
 
-export const comprehensiveCheck = (prompt) => 
-  api.post('/comprehensive_check', { text: prompt });
+export const comprehensiveCheck = (prompt, detectorSettings = {}) => 
+  api.post('/comprehensive_check', { 
+    text: prompt,
+    ...detectorSettings
+  });
 
 export default api;

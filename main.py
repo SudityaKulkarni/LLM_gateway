@@ -268,6 +268,7 @@ async def comprehensive_check(request: ComprehensiveCheckRequest):
             check_toxicity=request.check_toxicity,
             check_jailbreak=request.check_jailbreak,
             check_prompt_injection=request.check_prompt_injection,
+            check_pii=request.check_pii,
             check_entropy=request.check_entropy,
             check_jailbreak_rules=request.check_jailbreak_rules,
             entropy_threshold=request.entropy_threshold

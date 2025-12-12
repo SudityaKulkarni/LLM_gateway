@@ -25,6 +25,7 @@ class ComprehensiveChecker:
         check_toxicity: bool = True,
         check_jailbreak: bool = True,
         check_prompt_injection: bool = True,
+        check_pii: bool = True,
         check_entropy: bool = True,
         check_jailbreak_rules: bool = True,
         entropy_threshold: float = 4.5
@@ -38,6 +39,7 @@ class ComprehensiveChecker:
             check_toxicity: Enable toxicity detection
             check_jailbreak: Enable jailbreak detection
             check_prompt_injection: Enable prompt injection detection
+            check_pii: Enable PII detection
             check_entropy: Enable Shannon entropy detection
             check_jailbreak_rules: Enable rule-based jailbreak detection
             entropy_threshold: Threshold for high entropy detection
@@ -59,6 +61,9 @@ class ComprehensiveChecker:
         
         if check_prompt_injection and "prompt_injection" in self.detectors:
             results["prompt_injection"] = self.detectors["prompt_injection"].detect(text)
+        
+        if check_pii and "pii" in self.detectors:
+            results["pii"] = self.detectors["pii"].redact(text)
         
         # Run entropy check
         if check_entropy:
