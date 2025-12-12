@@ -35,7 +35,16 @@ PII_PATTERNS: Dict[str, Dict[str, str]] = {
     "aws_key": {
         "pattern": r'\b(AKIA[0-9A-Z]{16})',
         "description": "AWS access keys"
+    },
+    "aadhar": {
+        "pattern": r'\b\d{4}[-\s]?\d{4}[-\s]?\d{4}\b',
+        "description": "Aadhar card numbers (India)"
+    },
+    "aadhar_vit": {
+        "pattern": r'\b[2-9]\d{3}[-\s]?\d{4}[-\s]?\d{4}\b',
+        "description": "Aadhar card numbers with validation (starts with 2-9)"
     }
+    
 }
 
 # Attack keyword patterns

@@ -3,18 +3,17 @@
 
 from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
-from services.openai_service import call_openai
-from schemas.requests import SafeGenerateRequest
-from services.openai_service import call_openai
-
-
+from services.gemini_service import call_gemini, sanitize_with_gemini
 
 from config import API_TITLE, API_VERSION, API_DESCRIPTION
 from schemas.requests import (
     TextRequest,
     ComprehensiveCheckRequest,
     PIIDetectionRequest,
-    PIIRedactionRequest
+    PIIRedactionRequest,
+    GeminiGenerateRequest,
+    SanitizeRequest,
+    EntropyRequest
 )
 
 # Detectors
@@ -25,6 +24,7 @@ from detectors.prompt_injection_detector import PromptInjectionDetector
 from detectors.pii_detector import PIIDetector
 from detectors.entropy_detector import shannon_entropy, detect_high_entropy
 from detectors.rule_detector import detect_jailbreak_rules
+
 # Services
 from services.comprehensive_checker import ComprehensiveChecker
 
@@ -95,13 +95,19 @@ async def root():
                 "/detect_toxicity",
                 "/detect_jailbreak",
                 "/detect_prompt_injection",
-                "/detect_pii"
+                "/detect_pii",
+                "/shannon_entropy",
+                "/jailbreak_rules"
             ],
             "protection": [
-                "/redact_pii"
+                "/redact_pii",
+                "/sanitize"
             ],
             "comprehensive": [
                 "/comprehensive_check"
+            ],
+            "generation": [
+                "/safe_generate_gemini"
             ],
             "health": [
                 "/health"
@@ -184,6 +190,64 @@ async def redact_pii(request: TextRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Redaction failed: {str(e)}")
 
+@app.post("/shannon_entropy")
+async def calculate_shannon_entropy(request: EntropyRequest):
+    """Calculate Shannon entropy of the input text"""
+    try:
+        entropy_value = shannon_entropy(request.text)
+        detection_result = detect_high_entropy(request.text, threshold=request.threshold)
+        
+        response = {
+            "entropy": entropy_value,
+            "threshold": request.threshold
+        }
+        
+        if entropy_value < request.threshold:
+            response["message"] = "Entropy is within normal range."
+            response["is_high_entropy"] = False
+        else:
+            response["is_high_entropy"] = True
+
+        if detection_result:
+            response["detection"] = detection_result
+        
+        return response
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Entropy calculation failed: {str(e)}")
+
+@app.post("/jailbreak_rules")
+async def jailbreak_rules_detection(request: TextRequest):
+    """Detect jailbreak attempts using rule-based patterns"""
+    try:
+        detection_results = detect_jailbreak_rules(request.text)
+        
+        return {
+            "detected": len(detection_results) > 0,
+            "patterns_matched": len(detection_results),
+            "detections": detection_results if detection_results else [{"message": "No jailbreak patterns detected."}]
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Jailbreak detection failed: {str(e)}")
+
+@app.post("/sanitize")
+async def sanitize_text(request: SanitizeRequest):
+    """Sanitize text using Gemini API to remove harmful content"""
+    try:
+        result = sanitize_with_gemini(
+            text=request.text,
+            api_key=request.gemini_api_key,
+            model=request.model
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Sanitization failed: {str(e)}")
+
 @app.post("/comprehensive_check")
 async def comprehensive_check(request: ComprehensiveCheckRequest):
     """Run all security checks and get overall risk assessment"""
@@ -193,18 +257,20 @@ async def comprehensive_check(request: ComprehensiveCheckRequest):
             check_gibberish=request.check_gibberish,
             check_toxicity=request.check_toxicity,
             check_jailbreak=request.check_jailbreak,
-            check_prompt_injection=request.check_prompt_injection
+            check_prompt_injection=request.check_prompt_injection,
+            check_entropy=request.check_entropy,
+            check_jailbreak_rules=request.check_jailbreak_rules,
+            entropy_threshold=request.entropy_threshold
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Check failed: {str(e)}")
 
-
-@app.post("/safe_generate")
-async def safe_generate(request: SafeGenerateRequest):
+@app.post("/safe_generate_gemini")
+async def safe_generate_gemini(request: GeminiGenerateRequest):
     """
-    Run safety checks → if safe → forward to OpenAI using user API key
+    Run safety checks → if safe → forward to Gemini using user API key
     """
     try:
         # 1️⃣ Run safety checks
@@ -213,11 +279,13 @@ async def safe_generate(request: SafeGenerateRequest):
             check_gibberish=request.check_gibberish,
             check_toxicity=request.check_toxicity,
             check_jailbreak=request.check_jailbreak,
-            check_prompt_injection=request.check_prompt_injection
+            check_prompt_injection=request.check_prompt_injection,
+            check_entropy=request.check_entropy,
+            check_jailbreak_rules=request.check_jailbreak_rules
         )
 
         # 2️⃣ Block unsafe prompts
-        if result.get("risk_score", 0) >= 0.7:
+        if result.get("risk_score", 0) >= 70:
             raise HTTPException(
                 status_code=403,
                 detail={
@@ -226,16 +294,17 @@ async def safe_generate(request: SafeGenerateRequest):
                 }
             )
 
-        # 3️⃣ Send to OpenAI using USER key
-        llm_response = call_openai(
+        # 3️⃣ Send to Gemini using USER key
+        gemini_response = call_gemini(
             prompt=request.text,
-            api_key=request.openai_api_key
+            api_key=request.gemini_api_key,
+            model=request.model
         )
 
         return {
             "status": "allowed",
             "risk_assessment": result,
-            "llm_response": llm_response
+            "llm_response": gemini_response
         }
 
     except HTTPException:
@@ -247,89 +316,6 @@ async def safe_generate(request: SafeGenerateRequest):
         )
 
 
-@app.post("/shannon_entropy")
-async def calculate_shannon_entropy(request: TextRequest):
-    """Calculate Shannon entropy of the input text"""
-    try:
-        entropy_value = shannon_entropy(request.text)
-        detection_result = detect_high_entropy(request.text)
-        
-        response = {
-            "entropy": entropy_value,
-        }
-        
-        if entropy_value < 4.5:
-            response["message"] = "Entropy is within normal range."
-
-        if detection_result:
-            response["detection"] = detection_result
-        
-        return response
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Entropy calculation failed: {str(e)}")
-
-    
-@app.post("/jail_break_detection")
-async def jail_break_detection(request: TextRequest):
-    """Detect jailbreak attempts using rule-based patterns"""
-    try:
-        detection_results = detect_jailbreak_rules(request.text)
-        
-        if detection_results == []:
-            detection_results = [{"message": "No jailbreak patterns detected."}]
-
-        return {
-            "detections": detection_results
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Jailbreak detection failed: {str(e)}")
-
-# from services.gemini_service import call_gemini  # you need to implement this similar to openai_service
-
-# @app.post("/safe_generate_gemini")
-# async def safe_generate_gemini(request: SafeGenerateRequest):
-#     try:
-#         result = comprehensive_checker.check(
-#             text=request.text,
-#             check_gibberish=request.check_gibberish,
-#             check_toxicity=request.check_toxicity,
-#             check_jailbreak=request.check_jailbreak,
-#             check_prompt_injection=request.check_prompt_injection
-#         )
-
-#         if result.get("risk_score", 0) >= 0.7:
-#             raise HTTPException(
-#                 status_code=403,
-#                 detail={
-#                     "message": "Prompt blocked due to safety risk",
-#                     "risk_assessment": result
-#                 }
-#             )
-        
-#         gemini_response = call_gemini(
-#             prompt=request.text,
-#             api_key=request.gemini_api_key
-#         )
-        
-#         return {
-#             "status": "allowed",
-#             "risk_assessment": result,
-#             "llm_response": gemini_response
-#         }
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         raise HTTPException(
-#             status_code=500,
-#             detail=f"Generation failed: {str(e)}"
-#         )
-
-
-
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000) 
