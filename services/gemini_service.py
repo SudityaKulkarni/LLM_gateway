@@ -19,7 +19,7 @@ def call_gemini(prompt: str, api_key: str, model: str = "gemini-2.0-flash-exp") 
     return response.text.strip()
 
 
-def sanitize_with_gemini(text: str, api_key: str, model: str = "gemini-2.0-flash-exp") -> dict:
+def sanitize_with_gemini(text: str, api_key: str, model: str = "gemini-2.5-flash") -> dict:
     """
     Sanitize text using Gemini API to remove harmful content
     

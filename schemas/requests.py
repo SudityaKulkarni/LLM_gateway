@@ -42,7 +42,7 @@ class PIIRedactionRequest(BaseModel):
 class GeminiGenerateRequest(BaseModel):
     text: str = Field(..., min_length=1)
     gemini_api_key: str = Field(..., min_length=20)
-    model: str = Field("gemini-2.0-flash-exp", description="Gemini model to use")
+    model: str = Field("gemini-2.5-flash", description="Gemini model to use")
     
     # optional safety toggles
     check_gibberish: bool = True
@@ -55,7 +55,7 @@ class GeminiGenerateRequest(BaseModel):
 class SanitizeRequest(BaseModel):
     text: str = Field(..., min_length=1, description="Text to sanitize")
     gemini_api_key: str = Field(..., min_length=20)
-    model: str = Field("gemini-2.0-flash-exp", description="Gemini model to use")
+    model: str = Field("gemini-2.5-flash", description="Gemini model to use")
 
 class EntropyRequest(BaseModel):
     text: str = Field(..., min_length=1, description="Text to analyze entropy")
