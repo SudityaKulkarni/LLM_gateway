@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nebula"
+version = "0.1.0"
+description = "Comprehensive safety guardrails for LLM applications with detection for toxicity, jailbreaks, PII, and more"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Suditya Kulkarni", email = "sudityaKulkarni7@gmail.com"}
+]
+keywords = ["llm", "safety", "guardrails", "toxicity", "jailbreak", "prompt-injection", "pii-detection", "ai-safety"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+
+dependencies = [
+    "torch>=2.0.0",
+    "transformers>=4.30.0",
+    "detoxify>=0.5.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+api = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.22.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/SudityaKulkarni/LLM_gateway"
+Repository = "https://github.com/SudityaKulkarni/LLM_gateway"
+"Bug Tracker" = "https://github.com/SudityaKulkarni/LLM_gateway/issues"
+
+[tool.setuptools]
+packages = ["detectors", "services", "schemas", "utils"]
+py-modules = ["llm_safety_guard", "config", "main"]
+
+[tool.setuptools.package-data]
+"*" = ["*.txt", "*.md"]

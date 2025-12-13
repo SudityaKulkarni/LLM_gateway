@@ -229,6 +229,65 @@ const ResultCard = ({ title, result, loading }) => {
               </div>
             )}
             
+            {/* PII Detection - Contains PII */}
+            {result.contains_pii !== undefined && (
+              <div className="flex items-start">
+                <span className="text-sm font-semibold text-blue-400 min-w-[140px]">Contains PII:</span>
+                <span className={`font-semibold ${result.contains_pii ? 'text-red-400' : 'text-green-400'}`}>
+                  {result.contains_pii ? 'Yes' : 'No'}
+                </span>
+              </div>
+            )}
+            
+            {/* Redaction Count */}
+            {result.redaction_count !== undefined && (
+              <div className="flex items-start">
+                <span className="text-sm font-semibold text-blue-400 min-w-[140px]">Redaction Count:</span>
+                <span className="text-gray-200 font-bold">{result.redaction_count}</span>
+              </div>
+            )}
+            
+            {/* Original Text */}
+            {result.original_text && (
+              <div>
+                <span className="text-sm font-semibold text-blue-400 block mb-2">Original Text:</span>
+                <div className="bg-slate-900/50 rounded p-3 border border-slate-600">
+                  <p className="text-gray-300 text-sm">{result.original_text}</p>
+                </div>
+              </div>
+            )}
+            
+            {/* Redacted Text */}
+            {result.redacted_text && (
+              <div>
+                <span className="text-sm font-semibold text-green-400 block mb-2">Redacted Text:</span>
+                <div className="bg-green-500/10 rounded p-3 border border-green-500/30">
+                  <p className="text-green-300 text-sm font-mono">{result.redacted_text}</p>
+                </div>
+              </div>
+            )}
+            
+            {/* Redactions List */}
+            {result.redactions && result.redactions.length > 0 && (
+              <div>
+                <span className="text-sm font-semibold text-blue-400 block mb-2">Redactions Applied:</span>
+                <div className="space-y-2 pl-4">
+                  {result.redactions.map((redaction, idx) => (
+                    <div key={idx} className="bg-yellow-500/10 rounded p-3 border border-yellow-500/30">
+                      <div className="text-sm">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-yellow-400 font-medium capitalize">{redaction.type.replace('_', ' ')}</span>
+                          <span className="text-gray-400 text-xs">→</span>
+                          <span className="text-gray-300 font-mono text-xs">{redaction.redacted_to}</span>
+                        </div>
+                        <div className="text-gray-400 text-xs">Original length: {redaction.original_length} characters</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
             {/* Detections */}
             {result.detections && result.detections.length > 0 && (
               <div>

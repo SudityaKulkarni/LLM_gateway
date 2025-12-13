@@ -1,10 +1,12 @@
 # detectors/jailbreak_detector.py
 """Jailbreak detection implementation"""
 
+import re
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
 from typing import Dict, Any
 from .base_detector import BaseDetector
 from config import ModelRegistry, Thresholds
+from utils.patterns import JAILBREAK_PATTERNS
 
 class JailbreakDetector(BaseDetector):
     """Detects jailbreak attempts including instruction injection and role-playing attacks"""
@@ -30,6 +32,26 @@ class JailbreakDetector(BaseDetector):
         """Detect jailbreak attempts"""
         text = self.validate_text(text)
         
+        # Quick regex check first
+        matched_patterns = []
+        for pattern in JAILBREAK_PATTERNS:
+            if re.search(pattern, text, re.IGNORECASE):
+                matched_patterns.append(pattern)
+        
+        # If regex detected jailbreak patterns, return immediately
+        if matched_patterns:
+            return {
+                "label": "Jailbreak Detected",
+                "is_jailbreak": True,
+                "score": 0.95,  # High confidence from regex
+                "risk_level": "High",
+                "status": "Jailbreak Detected (Pattern Match)",
+                "detection_method": "regex",
+                "matched_patterns": len(matched_patterns),
+                "message": f"Detected {len(matched_patterns)} jailbreak pattern(s)"
+            }
+        
+        # If regex passes, proceed with ML model
         result = self.pipeline(text)[0]
         score = float(result["score"])
         label = result["label"]

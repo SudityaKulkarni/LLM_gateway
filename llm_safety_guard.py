@@ -88,7 +88,9 @@ class Guard:
             "toxicity": 0.6,
             "jailbreak": 0.7,
             "prompt_injection": 0.8,
-            "pii": 0.5
+            "pii": 0.5,
+            "entropy": 4.5,
+            "jailbreak_rules": 0.5
         }
         
         if thresholds:
@@ -100,7 +102,9 @@ class Guard:
             "toxicity": 1.0,
             "jailbreak": 1.2,
             "prompt_injection": 1.5,
-            "pii": 0.8
+            "pii": 0.8,
+            "entropy": 0.7,
+            "jailbreak_rules": 1.0
         }
     
     @classmethod
@@ -121,7 +125,7 @@ class Guard:
             redact_pii: Auto-redact PII in output
         """
         if validators is None:
-            validators = ["gibberish", "toxicity", "jailbreak", "prompt_injection"]
+            validators = ["gibberish", "toxicity", "jailbreak", "prompt_injection", "entropy", "jailbreak_rules"]
         
         return cls(
             detectors={},  # Set via init_detectors
@@ -251,14 +255,45 @@ class Guard:
             }
         
         elif name == "pii":
-            result = detector.detect(text)
-            entities = result.get("entities", [])
-            has_pii = result.get("has_pii", False)
+            result = detector.redact(text)
+            has_pii = result.get("contains_pii", False)
+            redactions = result.get("redactions", [])
             return {
                 "detected": has_pii,
                 "confidence": 1.0 if has_pii else 0.0,
-                "risk_score": min(len(entities) * 0.2, 1.0) if has_pii else 0.0,
+                "risk_score": min(len(redactions) * 0.2, 1.0) if has_pii else 0.0,
                 "raw": result
+            }
+        
+        elif name == "entropy":
+            from detectors.entropy_detector import shannon_entropy, detect_high_entropy
+            entropy_value = shannon_entropy(text)
+            entropy_detection = detect_high_entropy(text, threshold=threshold)
+            is_high_entropy = entropy_detection is not None
+            return {
+                "detected": is_high_entropy,
+                "confidence": min(entropy_value / 10.0, 1.0),
+                "risk_score": min(entropy_value / 10.0, 1.0) if is_high_entropy else 0.0,
+                "raw": {
+                    "entropy_value": entropy_value,
+                    "is_high_entropy": is_high_entropy,
+                    "detection": entropy_detection
+                }
+            }
+        
+        elif name == "jailbreak_rules":
+            from detectors.rule_detector import detect_jailbreak_rules
+            rule_detections = detect_jailbreak_rules(text)
+            detected = len(rule_detections) > 0
+            return {
+                "detected": detected,
+                "confidence": min(len(rule_detections) * 0.25, 1.0),
+                "risk_score": min(len(rule_detections) * 0.3, 1.0) if detected else 0.0,
+                "raw": {
+                    "detections": rule_detections,
+                    "detected": detected,
+                    "patterns_matched": len(rule_detections)
+                }
             }
         
         return {
@@ -347,7 +382,7 @@ class Guards:
             detectors = initialize_detectors()
         return Guard(
             detectors=detectors,
-            validators=["gibberish", "toxicity", "jailbreak", "prompt_injection"]
+            validators=["gibberish", "toxicity", "jailbreak", "prompt_injection", "entropy", "jailbreak_rules"]
         )
     
     @staticmethod
@@ -357,7 +392,7 @@ class Guards:
             detectors = initialize_detectors()
         return Guard(
             detectors=detectors,
-            validators=["gibberish", "toxicity", "jailbreak", "prompt_injection", "pii"],
+            validators=["gibberish", "toxicity", "jailbreak", "prompt_injection", "pii", "entropy", "jailbreak_rules"],
             redact_pii=True
         )
     
@@ -368,7 +403,7 @@ class Guards:
             detectors = initialize_detectors()
         return Guard(
             detectors=detectors,
-            validators=["gibberish", "toxicity", "jailbreak", "prompt_injection", "pii"],
+            validators=["gibberish", "toxicity", "jailbreak", "prompt_injection", "pii", "entropy", "jailbreak_rules"],
             redact_pii=True
         )
     

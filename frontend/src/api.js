@@ -16,7 +16,10 @@ export const checkToxicity = (prompt) =>
   api.post('/detect_toxicity', { text: prompt });
 
 export const checkPII = (prompt) => 
-  api.post('/detect_pii', { text: prompt });
+  api.post('/redact_pii', { text: prompt });
+
+export const redactPII = (prompt) => 
+  api.post('/redact_pii', { text: prompt });
 
 export const checkPromptInjection = (prompt) => 
   api.post('/detect_prompt_injection', { text: prompt });
@@ -24,8 +27,8 @@ export const checkPromptInjection = (prompt) =>
 export const checkGibberish = (prompt) => 
   api.post('/detect_gibberish', { text: prompt });
 
-export const checkEntropy = (prompt) => 
-  api.post('/shannon_entropy', { text: prompt });
+export const checkEntropy = (prompt, threshold = 4.5) => 
+  api.post('/shannon_entropy', { text: prompt, threshold });
 
 export const checkRuleBased = (prompt) => 
   api.post('/jailbreak_rules', { text: prompt });
@@ -33,10 +36,7 @@ export const checkRuleBased = (prompt) =>
 export const safeGenerate = (prompt, apiKey) => 
   api.post('/safe_generate_gemini', { text: prompt, gemini_api_key: apiKey });
 
-export const comprehensiveCheck = (prompt, detectorSettings = {}) => 
-  api.post('/comprehensive_check', { 
-    text: prompt,
-    ...detectorSettings
-  });
+export const comprehensiveCheck = (prompt, settings = {}) => 
+  api.post('/comprehensive_check', { text: prompt, ...settings });
 
 export default api;

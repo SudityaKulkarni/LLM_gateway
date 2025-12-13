@@ -1,0 +1,19 @@
+include README_PACKAGE.md
+include LICENSE
+include requirements.txt
+recursive-include detectors *.py
+recursive-include services *.py
+recursive-include schemas *.py
+recursive-include utils *.py
+include llm_safety_guard.py
+include config.py
+include main.py
+exclude frontend
+exclude frontend/*
+prune frontend
+exclude tests
+prune tests
+global-exclude __pycache__
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude .DS_Store

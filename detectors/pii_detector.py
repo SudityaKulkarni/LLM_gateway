@@ -7,7 +7,7 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipe
 from typing import Dict, Any, List
 from .base_detector import BaseDetector
 from config import ModelRegistry, Thresholds
-from utils.patterns import PII_PATTERNS
+from utils.patterns import PII_PATTERNS, PII_QUICK_PATTERNS
 
 class PIIDetector(BaseDetector):
     """Detects and redacts Personal Identifiable Information"""
@@ -68,6 +68,28 @@ class PIIDetector(BaseDetector):
         """Detect PII in text using ML model"""
         text = self.validate_text(text)
         
+        # Quick regex check first
+        pii_found = False
+        for pattern in PII_QUICK_PATTERNS:
+            if re.search(pattern, text):
+                pii_found = True
+                break
+        
+        # If regex detected PII, return immediately
+        if pii_found:
+            pii_types = self._find_pii_types(text)
+            return {
+                "contains_pii": True,
+                "risk_level": "High",
+                "confidence": 0.95,
+                "classification": "PII",
+                "recommendation": "Redact before processing",
+                "pii_types_detected": pii_types,
+                "detection_method": "regex",
+                "message": "PII detected via pattern matching"
+            }
+        
+        # If regex passes, proceed with ML model
         result = self.pipeline(text)[0]
         score = float(result["score"])
         label = result["label"]

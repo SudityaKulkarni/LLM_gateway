@@ -1,12 +1,13 @@
 # detectors/prompt_injection_detector.py
 """Prompt injection detection implementation"""
 
+import re
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
 from typing import Dict, Any, List
 from .base_detector import BaseDetector
 from config import ModelRegistry, Thresholds
-from utils.patterns import ATTACK_KEYWORDS
+from utils.patterns import ATTACK_KEYWORDS, PROMPT_INJECTION_PATTERNS
 
 class PromptInjectionDetector(BaseDetector):
     """Detects prompt injection attacks using ProtectAI model"""
@@ -49,9 +50,30 @@ class PromptInjectionDetector(BaseDetector):
         return attack_types if attack_types else ["unknown"]
     
     def detect(self, text: str) -> Dict[str, Any]:
-        """Detect prompt injection attempts"""
+        """Detect prompt injection attacks"""
         text = self.validate_text(text)
         
+        # Quick regex check first
+        matched_patterns = []
+        for pattern in PROMPT_INJECTION_PATTERNS:
+            if re.search(pattern, text, re.IGNORECASE):
+                matched_patterns.append(pattern)
+        
+        # If regex detected injection patterns, return immediately
+        if matched_patterns:
+            return {
+                "label": "Injection Detected",
+                "is_injection": True,
+                "score": 0.95,  # High confidence from regex
+                "risk_level": "Critical",
+                "status": "Prompt Injection Detected (Pattern Match)",
+                "detection_method": "regex",
+                "matched_patterns": len(matched_patterns),
+                "attack_types": self._identify_attack_types(text),
+                "message": f"Detected {len(matched_patterns)} injection pattern(s)"
+            }
+        
+        # If regex passes, proceed with ML model
         result = self.pipeline(text)[0]
         score = float(result["score"])
         label = result["label"]

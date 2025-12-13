@@ -1,12 +1,19 @@
 # main.py
 """FastAPI application entry point"""
 
+import re
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from services.gemini_service import call_gemini, sanitize_with_gemini
 
 from config import API_TITLE, API_VERSION, API_DESCRIPTION
+from utils.patterns import (
+    JAILBREAK_PATTERNS,
+    PROMPT_INJECTION_PATTERNS,
+    TOXICITY_PATTERNS,
+    PII_QUICK_PATTERNS
+)
 from schemas.requests import (
     TextRequest,
     ComprehensiveCheckRequest,
@@ -32,6 +39,57 @@ from services.comprehensive_checker import ComprehensiveChecker
 # Global detector instances
 detectors = {}
 comprehensive_checker = None
+
+# ==================== Regex Pre-screening Functions ====================
+
+def check_jailbreak_regex(text: str) -> dict:
+    """Quick regex check for jailbreak patterns"""
+    for pattern in JAILBREAK_PATTERNS:
+        if re.search(pattern, text, re.IGNORECASE):
+            return {
+                "status": "FAILED",
+                "is_jailbreak": True,
+                "detection_method": "regex",
+                "message": "Jailbreak pattern detected"
+            }
+    return None
+
+def check_prompt_injection_regex(text: str) -> dict:
+    """Quick regex check for prompt injection patterns"""
+    for pattern in PROMPT_INJECTION_PATTERNS:
+        print(pattern)
+        if re.search(pattern, text, re.IGNORECASE):
+            return {
+                "status": "FAILED",
+                "is_injection": True,
+                "detection_method": "regex",
+                "message": "Prompt injection pattern detected"
+            }
+    return None
+
+def check_toxicity_regex(text: str) -> dict:
+    """Quick regex check for toxic patterns"""
+    for pattern in TOXICITY_PATTERNS:
+        if re.search(pattern, text, re.IGNORECASE):
+            return {
+                "status": "FAILED",
+                "is_toxic": True,
+                "detection_method": "regex",
+                "message": "Toxic pattern detected"
+            }
+    return None
+
+def check_pii_regex(text: str) -> dict:
+    """Quick regex check for PII patterns"""
+    for pattern in PII_QUICK_PATTERNS:
+        if re.search(pattern, text):
+            return {
+                "status": "FAILED",
+                "contains_pii": True,
+                "detection_method": "regex",
+                "message": "PII pattern detected"
+            }
+    return None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -86,8 +144,10 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  # React dev server
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
 )
 
 # ==================== Routes ====================
@@ -154,6 +214,12 @@ async def detect_gibberish(request: TextRequest):
 async def detect_toxicity(request: TextRequest):
     """Detect toxic, offensive, or harmful content"""
     try:
+        # Check regex patterns first
+        regex_result = check_toxicity_regex(request.text)
+        if regex_result:
+            return regex_result
+        
+        # If regex passes, run ML model
         return detectors["toxicity"].detect(request.text)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -164,6 +230,12 @@ async def detect_toxicity(request: TextRequest):
 async def detect_jailbreak(request: TextRequest):
     """Detect general jailbreak attempts"""
     try:
+        # Check regex patterns first
+        regex_result = check_jailbreak_regex(request.text)
+        if regex_result:
+            return regex_result
+        
+        # If regex passes, run ML model
         return detectors["jailbreak"].detect(request.text)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -174,6 +246,13 @@ async def detect_jailbreak(request: TextRequest):
 async def detect_prompt_injection(request: TextRequest):
     """Advanced detection of prompt injection attacks"""
     try:
+        # Check regex patterns first
+        regex_result = check_prompt_injection_regex(request.text)
+        print(regex_result)
+        if regex_result:
+            return regex_result
+        
+        # If regex passes, run ML model
         return detectors["prompt_injection"].detect(request.text)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -184,6 +263,12 @@ async def detect_prompt_injection(request: TextRequest):
 async def detect_pii(request: TextRequest):
     """Detect Personal Identifiable Information (PII)"""
     try:
+        # Check regex patterns first
+        regex_result = check_pii_regex(request.text)
+        if regex_result:
+            return regex_result
+        
+        # If regex passes, run ML model
         return detectors["pii"].detect(request.text)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

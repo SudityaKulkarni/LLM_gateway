@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import InputBox from '../components/InputBox';
 import ResultCard from '../components/ResultCard';
-import { checkPII } from '../api';
+import { redactPII } from '../api';
 
 const PIIDetector = () => {
   const [prompt, setPrompt] = useState('');
@@ -16,7 +16,7 @@ const PIIDetector = () => {
     setError(null);
     
     try {
-      const response = await checkPII(prompt);
+      const response = await redactPII(prompt);
       setResult(response.data);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to check prompt');

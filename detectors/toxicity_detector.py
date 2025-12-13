@@ -1,10 +1,12 @@
 # detectors/toxicity_detector.py
 """Toxicity detection implementation"""
 
+import re
 from detoxify import Detoxify
 from typing import Dict, Any
 from .base_detector import BaseDetector
 from config import ModelRegistry, Thresholds
+from utils.patterns import TOXICITY_PATTERNS
 
 class ToxicityDetector(BaseDetector):
     """Detects toxic, offensive, or harmful content"""
@@ -24,6 +26,32 @@ class ToxicityDetector(BaseDetector):
         """Detect toxicity in text"""
         text = self.validate_text(text)
         
+        # Quick regex check first
+        matched_patterns = []
+        for pattern in TOXICITY_PATTERNS:
+            if re.search(pattern, text, re.IGNORECASE):
+                matched_patterns.append(pattern)
+        
+        # If regex detected toxic patterns, return immediately
+        if matched_patterns:
+            return {
+                "label": "Very Toxic",
+                "is_toxic": True,
+                "score": 0.95,  # High toxicity from regex
+                "detection_method": "regex",
+                "matched_patterns": len(matched_patterns),
+                "categories": {
+                    "toxicity": 0.95,
+                    "severe_toxicity": 0.80,
+                    "obscene": 0.85,
+                    "threat": 0.70,
+                    "insult": 0.90,
+                    "identity_attack": 0.75
+                },
+                "message": f"Detected {len(matched_patterns)} toxic pattern(s)"
+            }
+        
+        # If regex passes, proceed with ML model
         results = self.model.predict(text)
         score = float(results['toxicity'])
         
